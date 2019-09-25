@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<project name="Starter">
+<target name="STARTER.UAT" description="STARTER UAT" >
+	<property name="db.connect" value="serverUAT\databaseUAT" />
+</target>
+</project>

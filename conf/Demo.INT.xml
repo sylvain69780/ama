@@ -1,1 +1,6 @@
-
+<?xml version="1.0"?>
+<project name="Starter">
+<target name="STARTER.INT" description="STARTER Integration" >
+	<property name="db.connect" value="serverINT\databaseINT" />
+</target>
+</project>
