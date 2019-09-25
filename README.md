@@ -5,7 +5,7 @@ AMA.HTA, an Application maintenance assistant, simple method to provide operator
 - Write configuration targets in the conf folder to be used for differents configuration (production, test, dev ...)
 - Values for parameters can be suggested to the operator using special list-all-xxx targets.
 
-- AMA.hta to display configuration targets and action targets to the operators, including description for each of them.
+- AMA.hta displays configuration targets and action targets to the operators, including description for each of them. Only targets with descriptions are displayed, that's way you can create hidden targets.
 - The tool is fool proof, showing the command and asking confirmation to the operator each time he click on the "run" button.
 - The tool manage a simple log naming convention, traking who did what, and log file rotation and purging.
 
