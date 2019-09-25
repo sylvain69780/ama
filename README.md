@@ -10,3 +10,5 @@ AMA.HTA, an Application maintenance assistant, simple method to provide operator
 - The tool manage a simple log naming convention, traking who did what, and log file rotation and purging.
 
 TIP : the HTA runtime mshta.exe runs by default in 32bit mode, in some situation you may have to import the hta_64bit.reg file to make it run in 64 bit mode.
+
+Important : you need to get nAnt and put binaries in the nant-0.92 folder to make it work.
