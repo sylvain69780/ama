@@ -1,0 +1,258 @@
+<HTML>
+<style>
+</style>
+	<HEAD>
+		<META HTTP-EQUIV="MSThemeCompatible" CONTENT="Yes" />
+		<TITLE>Application Maintenance Assistant (AMA)</TITLE>
+		<HTA:APPLICATION NAVIGABLE="no" SCROLL="no">
+		<script LANGUAGE="VBScript">
+		<!-- functions -->		
+Option Explicit
+Dim objDictionaryConf : Set objDictionaryConf = CreateObject("Scripting.Dictionary")
+Dim objDictionaryTargets : Set objDictionaryTargets = CreateObject("Scripting.Dictionary")
+Sub checkConfiguration
+	Dim fso: Set fso = CreateObject("Scripting.FileSystemObject")
+	' seems sometime mshta.exe has trouble to set the woring directory of the script
+	If Not fso.FileExists("AMA.hta") Then
+		Msgbox "Issue with base AMA base directory. Please try again."
+		Self.Close
+	End If
+End Sub
+Sub getProjectFile()
+	Dim fso: Set fso = CreateObject("Scripting.FileSystemObject")
+	Dim oFolder : Set oFolder = fso.GetFolder(".")
+	Dim oFiles  : Set oFiles = fso.GetFolder(oFolder.Path).Files
+	Dim oFile
+	Dim sFileName,sTarget,sDescription
+	Dim xmlProjectFile  : Set xmlProjectFile = CreateObject("Microsoft.XMLDOM") : xmlProjectFile.Async = "False"
+	Dim oTargets,oTarget
+	For Each oFile In oFiles
+		If Lcase(fso.GetExtensionName(oFile.Name)) = "build" Then
+			sFileName=fso.GetBaseName(oFile.Name) & ".build"
+			xmlProjectFile.Load(sFileName)
+			projectFile.innerHtml=sFileName & " (" & xmlProjectFile.selectSingleNode("/project").getAttribute("name") & ")"
+			projectDescription.innerHtml=xmlProjectFile.selectSingleNode("/project/description").text
+			' load targets and descriptions
+			Set oTargets = xmlProjectFile.selectNodes("/project/target")
+			For Each oTarget In oTargets
+				sDescription = oTarget.getAttribute("description")
+				sTarget = oTarget.getAttribute("name")
+				objDictionaryTargets.Add sTarget,sDescription
+				If sDescription <> "null" and sDescription <> "" Then
+					Dim objOption :	Set objOption = Document.createElement("OPTION")
+					objOption.Value = sTarget
+					objOption.Text =  sTarget
+					targetList.Add(objOption)		
+				End If 
+			Next
+			Exit Sub
+		End If
+	Next
+End Sub
+Sub targetList_OnChange()
+	getTargetDescription
+	getRunCommand
+End Sub
+Sub getConfFiles()
+	Dim fso: Set fso = CreateObject("Scripting.FileSystemObject")
+	Dim oFolder : Set oFolder = fso.GetFolder("conf")
+	Dim oFiles  : Set oFiles = fso.GetFolder(oFolder.Path).Files
+	Dim oFile
+	Dim sFileName
+	Dim sTargetName
+	Dim sDescription
+	Dim objOption
+	Dim xmlConf  : Set xmlConf = CreateObject("Microsoft.XMLDOM") :	xmlConf.Async = "False"
+	For Each oFile In oFiles
+		If Lcase(fso.GetExtensionName(oFile.Name)) = "xml" Then
+			sFileName=fso.GetBaseName(oFile.Name) & ".xml"
+			xmlConf.Load("conf\" & sFileName)
+			sTargetName = xmlConf.documentElement.selectSingleNode("/project/target").getAttribute("name")
+			sDescription = xmlConf.documentElement.selectSingleNode("/project/target").getAttribute("description")
+			Set objOption = Document.createElement("OPTION")
+			objOption.Value = sTargetName
+			objOption.Text = sFileName & " ("& sTargetName & ")"
+			confList.Add(objOption)		
+			objDictionaryConf.Add sTargetName,sDescription
+		End If
+	Next
+End Sub
+Sub confList_OnChange()
+	confDescription.innerHtml=objDictionaryConf.Item(confList.Value)
+	getRunCommand
+End Sub
+Sub getTargetDescription()
+	Dim sDescription : sDescription = objDictionaryTargets.Item(targetList.Value) ' targetDescription.innerHtml
+	Dim sProperties
+	If confList.Value <> "noconf" and targetList.Value <> "notarget" Then
+		Dim objRE,objMatch
+		Set objRE = New RegExp : objRE.IgnoreCase = True : objRE.Pattern = "-D:(\S+?)=(\S+)" : objRE.Global = True
+		Set objMatch = objRE.Execute( sDescription )
+		targetDescription.innerHtml = sDescription
+		If objMatch.Count > 0 Then
+			Dim i
+			For i = 0 To objMatch.Count - 1 
+				Dim sProperty,sValue
+				sProperty   = objMatch.Item(i).Submatches(0)
+				sValue = objMatch.Item(i).Submatches(1)
+				If objDictionaryTargets.Exists("get-all-" & sProperty) Then
+					targetDescription.innerHtml = replace(targetDescription.innerHtml,"-D:" & sProperty & "=" & sValue & "" , "<BR/>-D:" & sProperty & "=<SELECT onChange=""setProperty()"" id=""" & sProperty & """><option value=""" & sValue & """>" & sValue & "</option></SELECT>")
+					fillOptions(sProperty)
+				End If
+			Next 
+		End If
+	End If
+End Sub
+Sub getRunCommand()
+	Dim objRE,objMatch
+	Set objRE = New RegExp : objRE.IgnoreCase = True : objRE.Pattern = "-D:(\S+?)=(\S+)" : objRE.Global = True
+	Dim sDescription : sDescription = objDictionaryTargets.Item(targetList.Value)
+	If confList.Value <> "noconf" and targetList.Value <> "notarget" Then
+		runCommand.Value = "ant_log.cmd " & confList.Value & " " & targetList.Value 
+		Set objMatch = objRE.Execute( sDescription )
+		If objMatch.Count > 0 Then
+			Dim i
+			For i = 0 To objMatch.Count - 1 
+				Dim sMatch,sProperty,sValue
+				sMatch      = objMatch.Item(i).Value
+				sProperty   = objMatch.Item(i).Submatches(0)
+				sValue      = objMatch.Item(i).Submatches(1)
+				runCommand.Value = runCommand.Value & " " & sMatch
+			Next 
+		End If
+	Else
+		runCommand.Value = ""
+	End If
+	getLogFile
+End Sub	
+Sub fillOptions(sProperty)
+		' Execute the target to get suggested values
+		Dim sRun : sRun = "ant_log.cmd " & confList.Value & " get-all-" & sProperty
+		Dim sLogFile : sLogFile = getLogFileName(sRun)
+		Dim oShell : set oShell = CreateObject("WScript.Shell")
+		Dim iRC
+ 		iRC = oShell.Run (sRun, 7, true)
+		If iRC = 0 Then
+			Dim fso : Set fso = CreateObject("Scripting.FileSystemObject")
+			Dim oFile : Set oFile = fso.OpenTextFile(sLogFile,1)
+			Dim sResult : sResult = oFile.ReadAll()
+			oFile.Close
+			Dim objRE : Set objRE = New RegExp : objRE.IgnoreCase = True : objRE.Global = True
+			objRE.Pattern = ":([\s\S]+)BUILD SUCCEEDED" 
+			Dim objMatch : Set objMatch = objRE.Execute( sResult )
+			If objMatch.Count = 1 Then
+				objRE.Pattern = "\[echo\] LISTITEM (.+)" 
+				' msgbox objMatch.Item(0).Submatches(0)
+				Set objMatch = objRE.Execute( objMatch.Item(0).Submatches(0) )
+				Dim i
+				For i=0 To objMatch.Count - 1
+					Dim objOption :	Set objOption = Document.createElement("OPTION")
+					objOption.Value = objMatch.Item(i).Submatches(0)
+					objOption.Text =  objMatch.Item(i).Submatches(0)
+					document.getElementById(sProperty).Add(objOption)		
+				Next
+			End If
+		Else
+			MsgBox "Failed to get suggested values for " & sProperty &  " from the build file."
+		End If 
+End Sub
+Function getLogFileName(sRun) 
+		Dim objRE,objMatch
+		Set objRE = New RegExp : objRE.IgnoreCase = True
+		objRE.Pattern = "ant_log.cmd (\S+?)\s+(\S+)"
+		Set objMatch = objRE.Execute(sRun)
+		sLogFile="unknown"
+		If objMatch.Count > 0 Then
+			Dim sOptions : sOptions = objMatch.Item(0).Submatches(0) & "_" & objMatch.Item(0).Submatches(1)
+			Dim oShell : set oShell = CreateObject("WScript.Shell")
+			Dim wshSystemEnv : Set wshSystemEnv = oShell.Environment( "Process" )
+			Dim sLogFile : sLogFile = "log\antlog_" & wshSystemEnv("USERNAME")& "_" & sOptions & ".log"
+		End If
+		getLogFileName = sLogFile
+End Function
+Sub getLogFile()
+	If runCommand.Value = "" Then
+		logFile.innerHtml = ""
+	Else
+		logFile.innerHtml = getLogFileName(runCommand.Value)
+	End If
+End Sub
+Sub setProperty()
+	Dim objButton : Set objButton = window.event.srcelement
+	Dim sSuggestTarget : sSuggestTarget = objButton.id
+	Dim objRE : Set objRE = New RegExp : objRE.IgnoreCase = True : objRE.Pattern = "-D:" & sSuggestTarget &"=(\S+)" : objRE.Global = True
+	objDictionaryTargets.Item(targetList.Value) = objRE.Replace(objDictionaryTargets.Item(targetList.Value),"-D:" & objButton.id & "=" & objButton.Value)
+	getRunCommand
+End Sub
+Sub runAction()
+	Dim sRun   : sRun = runCommand.Value
+	Dim sLogFile : sLogFile = logFile.innerHtml
+	If MsgBox("You are going to execute this action : " & Chr(10) & Chr(10) & sRun & _ 
+		Chr(10) & Chr(10) & _
+		objDictionaryConf.Item(confList.Value) & _
+		Chr(10) & "and" & Chr(10) & _
+		objDictionaryTargets.Item(targetList.Value) & _
+		Chr(10) & Chr(10) & _
+		"Please spend few second to check again if this is the correct environment and action, and confirm.",1,"Please confirm") = 2 Then
+		Exit Sub
+	Else
+		Dim oShell : set oShell = CreateObject("WScript.Shell")
+		Dim iRC
+		iRC = oShell.Run (sRun, 1, true)
+		If iRC = 0 Then
+			MsgBox "Congratulation the command completed successfully."
+		Else
+			MsgBox "Operation FAILED, please check the log file for details."
+			viewLog()
+		End If 
+	End If
+End Sub	
+Sub viewLog()
+	Dim oShell : set oShell = CreateObject("WScript.Shell")
+	Dim sLogFile : sLogFile = logFile.innerHtml
+	oShell.Run "notepad " & sLogFile, 1, false
+End Sub
+	</script>
+	</HEAD>
+	<BODY>
+		<DIV align="center">
+			<h3>Application Maintenance Assistant (AMA)</h3>
+			<DIV align="left" style="padding-left: 20px;padding-right: 20px ; background: #EEE; margin-left: 10px;margin-right: 10px;" >
+			<DIV><SPAN>NANT Project file : </SPAN><SPAN id="projectFile"></SPAN></DIV>
+			<DIV><SPAN id="projectDescription" style="font-weight: bold;"></SPAN></DIV>
+				<SPAN id="notice">Please select on the dropdown lists below a system and a target operation to execute on it. Please carfully review and complete if needed the generated command before executing it. A trace file will be generated in the log folder. You can also copy past the generated command in a DOS prompt, or schedule it using Windows tasks scheduler.</SPAN>
+			</DIV>
+			<BR/>
+				<SELECT id="confList" onchange="confList_OnChange" style="width: 300px;" ><option value="noconf">Please select a configuration</option></SELECT>
+			<BR>
+			<BR>
+				<DIV id="confDescription" align="left" style="padding-left: 20px;padding-right: 20px ; background: #EEE; margin-left: 10px;margin-right: 10px;" ></DIV>
+			<BR>
+				<SELECT id="targetList" onchange="targetList_OnChange" style="width: 300px;" ><option value="notarget">Please select an option</option></SELECT>
+			<BR>
+			<BR>
+				<DIV id="targetDescription" align="left" style="padding-left: 20px;padding-right: 20px ; background: #EEE; margin-left: 10px;margin-right: 10px;" ></DIV>
+			<BR>
+				<DIV id="InformationMessage" align="left" style="padding-left: 20px;padding-right: 20px ; background: #EEE; margin-left: 10px;margin-right: 10px;" >
+					Click on the run button below to execute, the log file will be named : <B><SPAN id="logFile"></SPAN></B>
+				</DIV>
+			<BR>
+				<input id="runCommand" type="text" name="runCommand" value="" size=50 onChange="getLogFile"/> 		
+				<BUTTON name="RunButton" onclick="runAction" style="width:70px" >Run</button>
+				<BUTTON name="viewLogButton" onclick="viewLog" style="width:70px" >View log</button>
+			<BR>
+			<BR>
+			<DIV>
+				Sylvain Le Courtois / May 2017 / Press F5 to refresh
+			</DIV>
+		</DIV>
+	</BODY>
+</HTML>
+<SCRIPT LANGUAGE="VBScript">
+	' Change WindowSize
+	checkConfiguration
+	notice.Style.display="none"
+	Self.ResizeTo 600,550
+	getProjectFile
+	getConfFiles
+</SCRIPT>

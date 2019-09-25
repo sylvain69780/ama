@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<project name="Starter">
+    <description>Starter project for scripting maintenance tasks.</description>
+	<echo message="Command executed by ${environment::get-variable('USERNAME')} on ${environment::get-variable('COMPUTERNAME')} at ${datetime::format-to-string(datetime::now(),'yyyy-MM-dd HH:mm:ss')}" />
+	<foreach item="File" in="Conf" property="filename">
+		<if test="${string::ends-with(path::get-file-name(filename),'.xml') }">
+			<include buildfile="${filename}"/>
+		</if> 
+	</foreach>
+	<target name="sample-target" description="Simple message target">
+		<echo message="for this environment, db.connect=${db.connect}" />
+	</target>	
+	<target name="sample-target-with-steps" description="Target with 3 steps" depends="step1,step2,step3" />
+	<target name="step1">
+		<echo message="This is step1" />
+	</target>	
+	<target name="step2">
+		<echo message="This is step2" />
+	</target>	
+	<target name="step3">
+		<echo message="This is step3" />
+	</target>	
+	<target name="sample-target-with-parameter" description=" Are you sure ? -D:yesno=xxx">
+		<echo message="yesno=${yesno}" />
+	</target>	
+	<target name="get-all-yesno">
+		<!-- Proposal for confirmation -->
+		<echo message="LISTITEM YES" />
+		<echo message="LISTITEM NO" />
+	</target>	
+</project> 
