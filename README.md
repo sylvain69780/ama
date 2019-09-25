@@ -1,5 +1,6 @@
 # ama
-AMA.HTA, an Application maintenance assistant, simple method to provide operators a graphical interface to your scripted procedures 
+AMA.HTA, an Application maintenance assistant, simple method to provide operators a graphical interface to your scripted procedures.
+It is using HTA : https://en.wikipedia.org/wiki/HTML_Application
 
 - Embed your scripted procedure in target elements in the nANT build file http://nant.sourceforge.net including exec calls to your existing powershell, SQL etc.
 - Write configuration targets in the conf folder to be used for differents configuration (production, test, dev ...)
