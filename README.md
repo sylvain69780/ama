@@ -8,7 +8,7 @@ It is using HTA : https://en.wikipedia.org/wiki/HTML_Application
 
 - AMA.hta displays configuration targets and action targets to the operators, including description for each of them. Only targets with descriptions are displayed, that's way you can create hidden targets.
 - The tool is fool proof, showing the command and asking confirmation to the operator each time he click on the "run" button.
-- The tool manage a simple log naming convention, traking who did what, and log file rotation and purging.
+- The tool manage a simple log file naming convention and rotation, the log files includes the name of the operator executing the action.
 
 TIP : the HTA runtime mshta.exe runs by default in 32bit mode, in some situation you may have to import the hta_64bit.reg file to make it run in 64 bit mode.
 
