@@ -13,3 +13,5 @@ It is using HTA : https://en.wikipedia.org/wiki/HTML_Application
 TIP : the HTA runtime mshta.exe runs by default in 32bit mode, in some situation you may have to import the hta_64bit.reg file to make it run in 64 bit mode.
 
 Important : you need to get nAnt and put binaries in the nant-0.92 folder to make it work.
+
+![AMA interface][AMA.png]
