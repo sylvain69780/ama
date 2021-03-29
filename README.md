@@ -14,4 +14,4 @@ TIP : the HTA runtime mshta.exe runs by default in 32bit mode, in some situation
 
 Important : you need to get nAnt and put binaries in the nant-0.92 folder to make it work.
 
-![AMA interface][AMA.png]
+![alt text](https://github.com/sylvain69780/ama/blob/8d220dad59d87afc73fbf1bedd204f69a3ba8a9e/AMA.png "AMA user interface")
